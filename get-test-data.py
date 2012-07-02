@@ -74,7 +74,7 @@ if __name__ == "__main__":
             BODY = string.join((
                 "From: %s" % sender,
                 "To: %s" % receivers,
-                "Subject: %s" % 'Hi' ,
+                "Subject: %s" % '2.0.0 trunk status' ,
                 "",
                 text
                 ), "\r\n")
