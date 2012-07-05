@@ -14,7 +14,7 @@ threshold = 0.15
 single_node_xmls = ['memcapable' , 'expirytests', 'drainratetests', 'deletebuckettests',
                     'setgettests', 'createbuckettests', 'recreatebuckettests']
 
-test_classes = ['rebalance', 'swaprebalance', 'view', 'xdcr', 'warmup', 'failover', 'basic']
+test_classes = ['rebalance', 'swaprebalance', 'views', 'xdcr', 'warmup', 'failover', 'basic']
 
 def get_build_doc(db, build):
     doc_id = ''
@@ -76,7 +76,7 @@ def get_detailed_status(options):
         test_data[name]['errors'] = errors_count
         test_data[name]['time'] = float(attributes.get('time'))
 
-    print test_data
+    #print test_data
     text = "Passed %s out of %s tests on %s build\n" % (total_tests-total_errors, total_tests,
                                                         options.build)
     num_failed = len(failed_tests)
@@ -112,8 +112,8 @@ def rules_engine(data={}):
             key = 'rebalance'
         elif test.startswith('swaprebalance'):
             key = 'swaprebalance'
-        elif test.startswith('view'):
-            key = 'view'
+        elif test.startswith('views'):
+            key = 'views'
         elif test.startswith('xdcr'):
             key = 'xdcr'
         elif test.startswith('failover'):
@@ -135,12 +135,11 @@ def send_email(build):
 
     num_tests = len(test_classes)
     text = ''
-    red_count = 0
     totals = 0
     errors = 0
     build_status = 'GREEN'
     if num_tests > 0:
-        text += "\nTests in detail (centos 64 bit):\n"
+        text += "\nTests in detail (only centos 64 bit):\n"
         for i in range(num_tests):
             test = test_classes[i]
             status = results[test]['status']
@@ -149,12 +148,17 @@ def send_email(build):
             totals += results[test]['tests']
             errors += results[test]['errors']
 
-
     if results['basic']['status'] is 'RED':
         build_status = 'RED'
     if errors > totals* threshold:
         build_status = 'RED'
 
+    if build_status is 'RED':
+        text = 'No more integrations are allowed until the trunk is green!! \n' + text
+    else:
+        text = 'Changes can be integrated into the trunk!! \n' + text
+
+    text += "\n\nhttp://hub.internal.couchbase.com/confluence/display/QA/2.0+trunk+health"
     print text
     try:
         BODY = string.join((
