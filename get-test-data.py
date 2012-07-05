@@ -1,10 +1,9 @@
-import sys
-sys.path.append('.')
-sys.path.append('lib')
 from optparse import OptionParser
 from couchdbkit import Server
 import smtplib
 import string
+from lxml import etree
+import StringIO
 
 sender = 'qe@couchbase.com'
 receivers = ['karan@couchbase.com']
@@ -41,40 +40,49 @@ if __name__ == "__main__":
     options, args = parser.parse_args()
 
     try:
-        tests = 0
-        errors = 0
+        total_tests = 0
+        total_errors = 0
         server = Server(options.node)
         db = server.get_db(options.database)
         doc = get_build_doc(db, options.build)
         doc_content = db.open_doc(doc['_id'])
         print "List of tests against %s are %s " % (options.build, doc_content['_attachments'].keys())
-
+        failed_tests = []
         for attachment, value in doc_content['_attachments'].items():
             error_count = 0
             tests_count = 0
             print "Fetching attachment %s " % attachment
             file = db.fetch_attachment(doc, attachment)
             file = file.encode('ascii', 'ignore')
-            file = file.split(" ")
-            for entry in file:
-                if entry.startswith("errors"):
-                    error_count = int(entry.replace('"', '').split('=')[-1])
-                    errors += error_count
+            xmldoc =  etree.parse(StringIO.StringIO(file))
+            root = xmldoc.getroot()
+            for child in root:
+                attributes = child.attrib
+                for childish in child:
+                    # To print the error
+                    #print childish.text
+                    failed_tests.append(attributes.get('name'))
+            attributes = root.attrib
+            print attributes
 
-                if entry.startswith("tests"):
-                    tests_count = int(entry.replace('"', '').split('=')[-1])
-                    tests += tests_count
-
-            print "Testname: %s, passed: %s, failed: %s" % (attachment.split('.xml')[0], tests_count-error_count,
+            error_count = int(attributes.get('errors'))
+            tests_count = int(attributes.get('tests'))
+            total_tests += tests_count
+            total_errors += error_count
+            print "Testname: %s, passed: %s, failed: %s" % (attributes.get('name'), tests_count-error_count,
                                                             error_count)
 
-
+        text = "Passed %s out of %s tests on %s build" % (total_tests-total_errors, total_tests,
+                                                          options.build)
+        print text
+        print "Failed Tests:"
+        print failed_tests
         try:
-            text = "Passed %s out of %s tests on %s build" % (tests-errors, tests, options.build)
+
             BODY = string.join((
                 "From: %s" % sender,
                 "To: %s" % receivers,
-                "Subject: %s" % '2.0.0 trunk status' ,
+                "Subject: %s: %s: " % ('2.0.0 trunk status', options.build) ,
                 "",
                 text
                 ), "\r\n")
