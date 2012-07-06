@@ -5,7 +5,7 @@ import string
 from lxml import etree
 import StringIO
 
-sender = 'karan@couchbase.com'
+sender = 'qe@couchbase.com'
 receivers = ['farshid@couchbase.com', 'peter@couchbase.com', 'karan@couchbase.com']
 #receivers = ['karan@couchbase.com']
 mail_server = '10.1.0.118'
@@ -16,6 +16,18 @@ single_node_xmls = ['memcapable' , 'expirytests', 'drainratetests', 'deletebucke
                     'setgettests', 'createbuckettests', 'recreatebuckettests']
 
 test_classes = ['basic', 'failover', 'rebalance', 'swaprebalance', 'views', 'warmup', 'xdcr']
+
+#TODO: dont hardcode
+url_mapping = {'basic': ['single-node-2-0-centos-64'],
+               'failover': ['centos-failover-tests'],
+               'swaprebalance': ['centos-64-2.0-swap-rebalance'],
+               'warmup': ['centos-64-2.0-rebalance-tests'],
+               'xdcr': ['Centos-64-XDCR-Smoke-tests'],
+               'views': ['centos-64-2.0-new-view-tests', 'centos-64-2.0-view-tests', 'centos-64-2.0-new-view-tests'],
+               'rebalance': ['centos-64-2.0-rebalance-tests', 'centos-64-2.0-new-rebalance',
+                             'centos-64-2.0-swap-rebalance']}
+
+jenkins_url = 'http://qa.hq.northscale.net/job'
 
 def get_build_doc(db, build):
     doc_id = ''
@@ -148,32 +160,39 @@ def send_email(build):
             status = results[test]['status']
             #text += "%s: %8s\n" % (test, status)
             if status is 'RED':
-                text += "%s: **** %s ****\n\n" % (test, status)
+                text += "%s: **** %s ****\n" % (test, status)
+                urls = url_mapping[test]
+                for url in urls:
+                    text += jenkins_url + '/' + url + '\n'
+                text += '\n'
             else:
                 text += "{0}: {1:8s}\n\n".format(test, status)
             totals += results[test]['tests']
             errors += results[test]['errors']
-        text += "\nTest details (ubuntu-64):\n"
-        text += " n/a"
-        text += "\nTest details (windows-64):\n"
-        text += " n/a"
-        text += "\nTest details (osx):\n"
-        text += " n/a\n"
+        #text += "\nTest details (ubuntu-64):\n"
+        #text += " n/a"
+        #text += "\nTest details (windows-64):\n"
+        #text += " n/a"
+        #text += "\nTest details (osx):\n"
+        #text += " n/a\n"
     if results['basic']['status'] is 'RED':
         build_status = 'RED'
     if errors > totals* threshold:
         build_status = 'RED'
 
     if build_status is 'RED':
-        msg = 'No more integrations are allowed until the trunk is green!! \n'
+        msg = 'Do NOT integrate until you receive a trunk status GREEN email! \n'
     else:
         msg = 'You can integrate changes after: \n'
         msg += ' * all unit tests pass\n'
         msg += ' * make simple-test passes\n'
 
     text = msg + text
-    text += "\nTrunk green process for 2.0:-\n"
-    text += "http://hub.internal.couchbase.com/confluence/display/QA/2.0+trunk+health"
+    text += "Trunk green process for 2.0:-\n"
+    text += "http://hub.internal.couchbase.com/confluence/display/QA/2.0+trunk+health\n\n"
+
+    text += "Disclaimer: In some cases, tests can fail because of intermittent\n" \
+            "infrastructure problems such as off-line slaves or power outages."
     print text
     try:
         BODY = string.join((
