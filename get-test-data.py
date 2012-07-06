@@ -7,6 +7,7 @@ import StringIO
 
 sender = 'karan@couchbase.com'
 receivers = ['farshid@couchbase.com', 'peter@couchbase.com', 'karan@couchbase.com']
+#receivers = ['karan@couchbase.com']
 mail_server = '10.1.0.118'
 results = {}
 threshold = 0.15
@@ -14,7 +15,7 @@ threshold = 0.15
 single_node_xmls = ['memcapable' , 'expirytests', 'drainratetests', 'deletebuckettests',
                     'setgettests', 'createbuckettests', 'recreatebuckettests']
 
-test_classes = ['rebalance', 'swaprebalance', 'views', 'xdcr', 'warmup', 'failover', 'basic']
+test_classes = ['basic', 'failover', 'rebalance', 'swaprebalance', 'views', 'warmup', 'xdcr']
 
 def get_build_doc(db, build):
     doc_id = ''
@@ -112,7 +113,7 @@ def rules_engine(data={}):
             key = 'rebalance'
         elif test.startswith('swaprebalance'):
             key = 'swaprebalance'
-        elif test.startswith('views'):
+        elif test.startswith('view'):
             key = 'views'
         elif test.startswith('xdcr'):
             key = 'xdcr'
@@ -128,6 +129,8 @@ def get_trunk_status():
     for test, data in results.items():
         if data['errors'] > threshold *  data['tests']:
             data['status'] = 'RED'
+        elif data['tests'] == 0:
+            data['status'] = 'N/A'
         else:
             data['status'] = 'GREEN'
 
@@ -139,25 +142,36 @@ def send_email(build):
     errors = 0
     build_status = 'GREEN'
     if num_tests > 0:
-        text += "\nTests in detail (only centos 64 bit):\n"
+        text += "\nTest details (centos-64):\n"
         for i in range(num_tests):
             test = test_classes[i]
             status = results[test]['status']
             #text += "%s: %8s\n" % (test, status)
-            text += "{0}: {1:8s}\n".format(test, status)
+            if status is 'RED':
+                text += "%s: **** %s ****\n\n" % (test, status)
+            else:
+                text += "{0}: {1:8s}\n\n".format(test, status)
             totals += results[test]['tests']
             errors += results[test]['errors']
-
+        text += "\nTest details (ubuntu-64):\n"
+        text += " n/a"
+        text += "\nTest details (windows-64):\n"
+        text += " n/a"
+        text += "\nTest details (osx):\n"
+        text += " n/a\n"
     if results['basic']['status'] is 'RED':
         build_status = 'RED'
     if errors > totals* threshold:
         build_status = 'RED'
 
     if build_status is 'RED':
-        text = 'No more integrations are allowed until the trunk is green!! \n' + text
+        msg = 'No more integrations are allowed until the trunk is green!! \n'
     else:
-        text = 'Changes can be integrated into the trunk!! \n' + text
+        msg = 'You can integrate changes after: \n'
+        msg += ' * all unit tests pass\n'
+        msg += ' * make simple-test passes\n'
 
+    text = msg + text
     text += "\nTrunk green process for 2.0:-\n"
     text += "http://hub.internal.couchbase.com/confluence/display/QA/2.0+trunk+health"
     print text
@@ -165,7 +179,7 @@ def send_email(build):
         BODY = string.join((
             "From: %s" % sender,
             "To: %s" % receivers,
-            "Subject: %s: %s: %s" % ('2.0.0 trunk status', build, build_status) ,
+            "Subject: %s %s: %s" % ('Trunk status for ', build, build_status) ,
             "", text
             ), "\r\n")
 
