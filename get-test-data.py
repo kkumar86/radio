@@ -6,7 +6,7 @@ from lxml import etree
 import StringIO
 
 sender = 'karan@couchbase.com'
-receivers = ['karan@couchbase.com']
+receivers = ['farshid@couchbase.com', 'peter@couchbase.com', 'karan@couchbase.com']
 mail_server = '10.1.0.118'
 results = {}
 threshold = 0.15
@@ -158,7 +158,8 @@ def send_email(build):
     else:
         text = 'Changes can be integrated into the trunk!! \n' + text
 
-    text += "\n\nhttp://hub.internal.couchbase.com/confluence/display/QA/2.0+trunk+health"
+    text += "\nTrunk green process for 2.0:-\n"
+    text += "http://hub.internal.couchbase.com/confluence/display/QA/2.0+trunk+health"
     print text
     try:
         BODY = string.join((
