@@ -6,8 +6,8 @@ from lxml import etree
 import StringIO
 
 sender = 'qe@couchbase.com'
-receivers = ['farshid@couchbase.com', 'peter@couchbase.com', 'karan@couchbase.com']
-#receivers = ['karan@couchbase.com']
+#receivers = ['farshid@couchbase.com', 'peter@couchbase.com', 'karan@couchbase.com']
+receivers = ['karan@couchbase.com']
 mail_server = '10.1.0.118'
 results = {}
 threshold = 0.15
